@@ -6,17 +6,29 @@ use App\Task;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use phpDocumentor\Reflection\Types\Integer;
 
 class TaskController extends Controller
 {
+    /**
+     * Get all tasks with children
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
-        $tasks = Task::all();
+        $tasks = Task::with('children')->get();
 
         return response()->json(['tasks'=> $tasks]);
     }
 
-    public function tasks(Request $request, $id = null)
+    /**
+     * Create task
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function createTask(Request $request)
     {
         // validate the input
         $validator = $this->validator($request->all());
@@ -25,18 +37,42 @@ class TaskController extends Controller
             return response()->json(['validationErrors' => $validator->errors()], 400);
         }
 
-        // Find task else create new task
-        if ($id) {
-            // try to find the task else throw exception of not found the model element
-            try {
-                $task = Task::findOrFail($id);
-            } catch (ModelNotFoundException $e) {
-                return response()->json(['message'=>'something went wrong','exception'=> $e], 500);
-            }
-        } else {
-            $task = new Task();
+        // Create new task
+        $task = new Task();
+        // task creating process
+        $status = $this->saveTask($task, $request);
+
+        // if task is not properly saved then return failure message with 500 code
+        if (!$status) {
+            return response()->json(['message' => 'Something went wrong!'], 500);
         }
-        // task saving process
+
+        return response()->json(['message' => 'Successfully saved!'], 201);
+    }
+
+    /**
+     * Update Task
+     *
+     * @param Request $request
+     * @param integer $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateTask(Request $request, $id)
+    {
+        // validate the input
+        $validator = $this->validator($request->all());
+        // If validation fails then return with status failed and validation error message
+        if ($validator->fails()) {
+            return response()->json(['validationErrors' => $validator->errors()], 400);
+        }
+
+        // Find task
+        try {
+            $task = Task::findOrFail($id);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message'=>'something went wrong','exception'=> $e], 500);
+        }
+        // task updating process
         $status = $this->saveTask($task, $request);
 
         // if task is not properly saved then return failure message with 500 code
@@ -92,9 +128,9 @@ class TaskController extends Controller
             [
                 'parent_id' => 'nullable|numeric|gt:0|exists:tasks,id',
                 'user_id' => 'required|numeric|gt:0',
-                'title' => 'required|string|gt:0',
-                'points' => 'required|numeric|digits_between:1,10',
-                'is_done' => 'required|numeric|digits_between:0,1',
+                'title' => 'required|string',
+                'points' => 'required|numeric|gte:1|lte:10',
+                'is_done' => 'required|numeric|gte:0|lte:1',
             ]
         );
 
