@@ -15,4 +15,4 @@ use Illuminate\Http\Request;
 
 Route::post('task', 'TaskController@createTask')->name('createTask');
 Route::post('task/{id}', 'TaskController@updateTask')->name('updateTask');
-Route::get('users', 'UserController@index')->name('getUsers');
+Route::get('tasks', 'TaskController@index')->name('index');

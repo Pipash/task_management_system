@@ -17,9 +17,10 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $tasks = Task::with('children')->get();
+        $tasks = Task::with('children')->whereNull('parent_id')->get();
+        $users = file_get_contents(config('global.usersEndpoint'));
 
-        return response()->json(['tasks'=> $tasks]);
+        return response()->json(['tasks' => $tasks,'users' => json_decode($users)]);
     }
 
     /**
@@ -47,7 +48,7 @@ class TaskController extends Controller
             return response()->json(['message' => 'Something went wrong!'], 500);
         }
 
-        return response()->json(['message' => 'Successfully saved!'], 201);
+        return response()->json($task, 201);
     }
 
     /**
@@ -68,10 +69,11 @@ class TaskController extends Controller
 
         // Find task
         try {
-            $task = Task::findOrFail($id);
+            $task = Task::with('children')->findOrFail($id);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message'=>'something went wrong','exception'=> $e], 500);
         }
+        //dd($task);
         // task updating process
         $status = $this->saveTask($task, $request);
 
@@ -80,11 +82,16 @@ class TaskController extends Controller
             return response()->json(['message' => 'Something went wrong!'], 500);
         }
 
-        return response()->json(['message' => 'Successfully saved!'], 201);
+        if (!$request->parent_id && $request->is_done && !empty($task->children)) {
+            $task->children()->update(['is_done' => $request->is_done]);
+        }
+        unset($task->children);
+
+        return response()->json($task, 201);
     }
 
     /**
-     * Save/Update process of the task
+     * Create/Update process of the task
      *
      * @param Task $task
      * @param Request $request
@@ -92,28 +99,26 @@ class TaskController extends Controller
      */
     private function saveTask($task, $request)
     {
-        if($request->parent_id) {
-            $task->parent_id = $request->parent_id;
-        }
         $task->user_id = $request->user_id;
         $task->title = $request->title;
         $task->points = $request->points;
         $task->is_done = $request->is_done;
-        $status = $task->save();
-
-        // update all children product with the parent product id
-        if (!empty($request->parent_id)) {
-            try {
-                $parentTask = Task::findOrFail($request->parent_id);
-            } catch(ModelNotFoundException $e) {
-                return response()->json(['message'=>'something went wrong','exception'=> $e], 500);
+        $task->points = $request->points;
+        if($request->parent_id) {
+            $task->parent_id = $request->parent_id;
+            $parent = Task::findOrFail($request->parent_id);
+            if ($parent->user_id != $request->user_id) {
+                return 0;
             }
-
-            $parentTask->points += $request->points;
-            $status = $parentTask->save();
+            if (!$request->is_done) {
+                $parent->is_done = $request->is_done;
+                $parent->save();
+            }
+        } else {
+            $task->points = 0;
         }
 
-        return $status;
+        return $task->save();
     }
 
     /**

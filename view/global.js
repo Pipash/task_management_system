@@ -1,1 +1,1 @@
-let usersEndpoint = "http://localhost/task_management_system/api/users";
+let usersEndpoint = "http://localhost/task_management_system/api/tasks";
