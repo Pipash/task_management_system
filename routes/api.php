@@ -13,6 +13,10 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::post('task', 'TaskController@createTask')->name('createTask');
-Route::post('task/{id}', 'TaskController@updateTask')->name('updateTask');
-Route::get('tasks', 'TaskController@index')->name('index');
+Route::group([
+    'middleware' => ['cors'],
+], function () {
+    Route::post('task', 'TaskController@createTask')->name('createTask');
+    Route::post('task/{id}', 'TaskController@updateTask')->name('updateTask');
+    Route::get('tasks', 'TaskController@index')->name('index');
+});

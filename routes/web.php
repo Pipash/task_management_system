@@ -12,5 +12,12 @@
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    $base = explode('/', asset('/'));
+    $public = '';
+    if ($base[2] == 'localhost') {
+        $public = 'public/';
+    }
+    $data['public'] = $public;
+
+    return view('index',$data);
 });

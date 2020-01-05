@@ -20,7 +20,7 @@ class TaskController extends Controller
         $tasks = Task::with('children')->whereNull('parent_id')->get();
         $users = file_get_contents(config('global.usersEndpoint'));
 
-        return response()->json(['tasks' => $tasks,'users' => json_decode($users)]);
+        return response()->json(['tasks' => $tasks,'users' => json_decode($users)], 200);
     }
 
     /**
